@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment and Logs
+.env
+.env.*
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database (Prisma/SQLite)
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# Uploads
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+
+# Gemini/Agentic files (optional, but usually ignored in repo)
+.gemini/
+brain/

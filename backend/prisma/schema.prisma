@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Store {
+  id        Int       @id @default(autoincrement())
+  name      String
+  location  String?
+  products  Product[]
+  sales     Sale[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Float
+  stock     Int
+  storeId   Int
+  store     Store    @relation(fields: [storeId], references: [id])
+  sales     SaleItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Sale {
+  id        Int        @id @default(autoincrement())
+  storeId   Int
+  store     Store      @relation(fields: [storeId], references: [id])
+  total     Float
+  items     SaleItem[]
+  date      DateTime   @default(now())
+}
+
+model SaleItem {
+  id        Int     @id @default(autoincrement())
+  saleId    Int
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  role      String   @default("staff")
+  createdAt DateTime @default(now())
+}
+
+model Memory {
+  id        Int      @id @default(autoincrement())
+  action    String
+  details   String?
+  timestamp DateTime @default(now())
+}
+
+model SystemConfig {
+  id             Int     @id @default(autoincrement())
+  companyName    String  @default("My Company")
+  logoUrl        String?
+  slogan         String?
+  themeMode      String  @default("dark")
+  backgroundUrl  String?
+  isSetup        Boolean @default(false)
+}
