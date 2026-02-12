@@ -70,63 +70,69 @@ const Dashboard = () => {
     const bgUrl = config.backgroundUrl || 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2940&auto=format&fit=crop';
 
     return (
-        <div className="max-w-7xl mx-auto relative">
-            {/* Background Image injected here to cover the hero area seamlessly */}
-            <div
-                className="absolute top-[-100px] left-[-50vw] right-[-50vw] h-[800px] opacity-60 bg-cover bg-center pointer-events-none mask-image-gradient mix-blend-multiply dark:mix-blend-screen transition-all duration-1000"
-                style={{ backgroundImage: `url('${bgUrl}')` }}
-            ></div>
-            <div className="absolute top-[-100px] left-0 right-0 h-[800px] bg-gradient-to-b from-transparent via-white/40 to-white/90 dark:via-dark-bg/40 dark:to-dark-bg/90 pointer-events-none"></div>
+        <div className="w-full max-w-[1600px] mx-auto relative">
+            {/* First Fold Container */}
+            <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-center relative px-4 md:px-8">
+                {/* Background Image injected here */}
+                <div
+                    className="absolute top-0 left-[-50vw] right-[-50vw] bottom-0 opacity-40 dark:opacity-60 bg-cover bg-center pointer-events-none mask-image-gradient mix-blend-multiply dark:mix-blend-screen transition-all duration-1000"
+                    style={{ backgroundImage: `url('${bgUrl}')` }}
+                ></div>
+                <div className="absolute top-0 left-[-50vw] right-[-50vw] bottom-0 bg-gradient-to-b from-transparent via-white/40 to-white/90 dark:via-dark-bg/40 dark:to-dark-bg/90 pointer-events-none"></div>
 
-            <Hero companyName={config.companyName} slogan={config.slogan} />
+                <div className="relative z-10 space-y-12 py-12">
+                    <Hero companyName={config.companyName} slogan={config.slogan} />
 
-            <div className="mb-8"></div>
-
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-12 relative z-10">
-                <Card title="Ventas" icon={<TrendingUp />} path="/sales" tagline="Registro Diario" />
-                <Card title="Tiendas" icon={<Store />} path="/stores" tagline="Gestión Local" />
-                <Card title="Inventarios" icon={<Package />} path="/inventory" tagline="Stock Global" />
-                <Card title="Promo Codes" icon={<Tag />} path="/promo" tagline="Campañas" />
-                <Card title="Estado" icon={<Activity />} path="/stats" tagline="Métricas Web3" />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
-                {/* Weekly Summary */}
-                <div className="bg-white dark:bg-dark-card/50 backdrop-blur-md rounded-3xl p-8 border border-gray-200 dark:border-white/5">
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Resumen Semanal</h3>
-                        <div className="flex space-x-2">
-                            <span className="w-3 h-3 rounded-full bg-dark-accent"></span>
-                            <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                        </div>
-                    </div>
-                    <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 relative overflow-hidden">
-                        <div className="absolute inset-0 flex items-end justify-between px-8 pb-8 opacity-50">
-                            {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
-                                <div key={i} className="w-8 bg-orange-200 dark:bg-dark-accent" style={{ height: `${h}%`, opacity: 0.1 + (i * 0.1) }}></div>
-                            ))}
-                        </div>
-                        <span className="text-gray-400 dark:text-gray-500 relative z-10">Gráfico Interactivo</span>
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-8">
+                        <Card title="Ventas" icon={<TrendingUp />} path="/sales" tagline="Registro Diario" />
+                        <Card title="Tiendas" icon={<Store />} path="/stores" tagline="Gestión Local" />
+                        <Card title="Inventarios" icon={<Package />} path="/inventory" tagline="Stock Global" />
+                        <Card title="Promo Codes" icon={<Tag />} path="/promo" tagline="Campañas" />
+                        <Card title="Estado" icon={<Activity />} path="/stats" tagline="Métricas Web3" />
                     </div>
                 </div>
+            </div>
 
-                {/* Featured Projects / Activities */}
-                <div className="bg-white dark:bg-dark-card/50 backdrop-blur-md rounded-3xl p-8 border border-gray-200 dark:border-white/5">
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Featured Projects</h3>
-                        <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded">🔥 HOT</span>
-                    </div>
-                    <div className="space-y-4">
-                        {[1, 2, 3].map((_, i) => (
-                            <div key={i} className="flex items-center p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer group">
-                                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 mr-4 group-hover:scale-105 transition-transform"></div>
-                                <div className="flex-1">
-                                    <h4 className="text-gray-900 dark:text-white font-bold group-hover:text-dark-accent transition-colors">Project Alpha {i + 1}</h4>
-                                    <p className="text-gray-500 dark:text-gray-400 text-sm">DeFi • +12.5%</p>
-                                </div>
-                                <button className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white text-sm hover:bg-gray-300 dark:hover:bg-white/20 hover:text-dark-accent transition-all">View</button>
+            {/* Second Fold - Analytics/Widgets */}
+            <div className="px-4 md:px-8 pb-12 space-y-12 mt-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
+                    {/* Weekly Summary */}
+                    <div className="bg-white dark:bg-dark-card/50 backdrop-blur-md rounded-3xl p-8 border border-gray-200 dark:border-white/5">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Resumen Semanal</h3>
+                            <div className="flex space-x-2">
+                                <span className="w-3 h-3 rounded-full bg-dark-accent"></span>
+                                <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                             </div>
-                        ))}
+                        </div>
+                        <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 relative overflow-hidden">
+                            <div className="absolute inset-0 flex items-end justify-between px-8 pb-8 opacity-50">
+                                {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+                                    <div key={i} className="w-8 bg-orange-200 dark:bg-dark-accent" style={{ height: `${h}%`, opacity: 0.1 + (i * 0.1) }}></div>
+                                ))}
+                            </div>
+                            <span className="text-gray-400 dark:text-gray-500 relative z-10">Gráfico Interactivo</span>
+                        </div>
+                    </div>
+
+                    {/* Featured Projects / Activities */}
+                    <div className="bg-white dark:bg-dark-card/50 backdrop-blur-md rounded-3xl p-8 border border-gray-200 dark:border-white/5">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Featured Projects</h3>
+                            <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded">🔥 HOT</span>
+                        </div>
+                        <div className="space-y-4">
+                            {[1, 2, 3].map((_, i) => (
+                                <div key={i} className="flex items-center p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer group">
+                                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 mr-4 group-hover:scale-105 transition-transform"></div>
+                                    <div className="flex-1">
+                                        <h4 className="text-gray-900 dark:text-white font-bold group-hover:text-dark-accent transition-colors">Project Alpha {i + 1}</h4>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm">DeFi • +12.5%</p>
+                                    </div>
+                                    <button className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white text-sm hover:bg-gray-300 dark:hover:bg-white/20 hover:text-dark-accent transition-all">View</button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
