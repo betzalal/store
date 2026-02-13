@@ -5,7 +5,11 @@ const prisma = new PrismaClient();
 
 router.get('/', async (req, res) => {
     try {
+        const { storeId } = req.query;
+        const where = storeId ? { storeId: parseInt(storeId) } : {};
+
         const products = await prisma.product.findMany({
+            where,
             include: { store: true }
         });
         res.json(products);

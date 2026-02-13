@@ -6,10 +6,12 @@ import Onboarding from './components/Onboarding/Onboarding';
 import Stores from './components/Sections/Stores';
 import Inventory from './components/Sections/Inventory';
 import Sales from './components/Sections/Sales';
+import Gastos from './components/Sections/Gastos';
 import Users from './components/Sections/Users';
 import Memory from './components/Sections/Memory';
 import PromoCodes from './components/Sections/PromoCodes';
 import Stats from './components/Sections/Stats';
+import { StoreProvider } from './context/StoreContext';
 
 const LoadingScreen = () => (
     <div className="min-h-screen bg-black flex items-center justify-center">
@@ -33,28 +35,31 @@ function App() {
     if (isSetup === null) return <LoadingScreen />;
 
     return (
-        <Router>
-            <div className="bg-white dark:bg-dark-bg min-h-screen text-gray-900 dark:text-white font-sans">
-                <Routes>
-                    <Route path="/onboarding" element={isSetup ? <Navigate to="/" /> : <Onboarding />} />
+        <StoreProvider>
+            <Router>
+                <div className="bg-white dark:bg-dark-bg min-h-screen text-gray-900 dark:text-white font-sans">
+                    <Routes>
+                        <Route path="/onboarding" element={isSetup ? <Navigate to="/" /> : <Onboarding />} />
 
-                    <Route path="/*" element={!isSetup ? <Navigate to="/onboarding" /> : (
-                        <MainLayout>
-                            <Routes>
-                                <Route path="/" element={<Dashboard />} />
-                                <Route path="/stores" element={<Stores />} />
-                                <Route path="/inventory" element={<Inventory />} />
-                                <Route path="/sales" element={<Sales />} />
-                                <Route path="/users" element={<Users />} />
-                                <Route path="/memory" element={<Memory />} />
-                                <Route path="/promo" element={<PromoCodes />} />
-                                <Route path="/stats" element={<Stats />} />
-                            </Routes>
-                        </MainLayout>
-                    )} />
-                </Routes>
-            </div>
-        </Router>
+                        <Route path="/*" element={!isSetup ? <Navigate to="/onboarding" /> : (
+                            <MainLayout>
+                                <Routes>
+                                    <Route path="/" element={<Dashboard />} />
+                                    <Route path="/stores" element={<Stores />} />
+                                    <Route path="/inventory" element={<Inventory />} />
+                                    <Route path="/sales" element={<Sales />} />
+                                    <Route path="/gastos" element={<Gastos />} />
+                                    <Route path="/users" element={<Users />} />
+                                    <Route path="/memory" element={<Memory />} />
+                                    <Route path="/promo" element={<PromoCodes />} />
+                                    <Route path="/stats" element={<Stats />} />
+                                </Routes>
+                            </MainLayout>
+                        )} />
+                    </Routes>
+                </div>
+            </Router>
+        </StoreProvider>
     );
 }
 

@@ -5,6 +5,7 @@ import { User, Building, Palette, Check, Upload } from 'lucide-react';
 const Onboarding = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
+    const [view, setView] = useState('setup'); // 'setup' or 'login'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -109,15 +110,17 @@ const Onboarding = () => {
 
             <div className="relative z-10 w-full max-w-lg bg-gray-900/90 border border-white/10 p-8 rounded-3xl shadow-2xl">
                 <h1 className="text-3xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600">
-                    Bienvenido
+                    {view === 'setup' ? 'Configuración Inicial' : 'Iniciar Sesión'}
                 </h1>
-                <p className="text-gray-400 text-center mb-8">Configura tu Magic Store en unos pasos</p>
+                <p className="text-gray-400 text-center mb-8">
+                    {view === 'setup' ? 'Configura tu Magic Store en unos pasos' : 'Ingresa tus credenciales de administrador'}
+                </p>
 
-                <StepIndicator />
+                {view === 'setup' && <StepIndicator />}
 
                 {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
 
-                {step === 1 && (
+                {view === 'setup' && step === 1 && (
                     <div className="space-y-4">
                         <h2 className="text-xl font-semibold flex items-center"><User className="mr-2 text-orange-500" /> Crear Administrador</h2>
                         <input
@@ -141,10 +144,62 @@ const Onboarding = () => {
                         >
                             Siguiente
                         </button>
+                        <div className="text-center pt-2">
+                            <button onClick={() => setView('login')} className="text-sm text-gray-500 hover:text-orange-500 transition-colors">
+                                ¿Ya tienes una cuenta? Inicia sesión aquí
+                            </button>
+                        </div>
                     </div>
                 )}
 
-                {step === 2 && (
+                {view === 'login' && (
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-semibold flex items-center"><User className="mr-2 text-orange-500" /> Acceso</h2>
+                        <input
+                            type="text"
+                            placeholder="Usuario"
+                            className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 focus:border-orange-500 focus:outline-none transition-colors"
+                            value={adminUser.username}
+                            onChange={(e) => setAdminUser({ ...adminUser, username: e.target.value })}
+                        />
+                        <input
+                            type="password"
+                            placeholder="Contraseña"
+                            className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 focus:border-orange-500 focus:outline-none transition-colors"
+                            value={adminUser.password}
+                            onChange={(e) => setAdminUser({ ...adminUser, password: e.target.value })}
+                        />
+                        <button
+                            onClick={async () => {
+                                setLoading(true);
+                                try {
+                                    const res = await fetch('http://localhost:3001/api/users/login', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(adminUser)
+                                    });
+                                    if (res.ok) {
+                                        navigate('/');
+                                        window.location.reload();
+                                    } else {
+                                        setError('Credenciales inválidas o error de conexión');
+                                    }
+                                } catch (err) { setError(err.message); }
+                                finally { setLoading(false); }
+                            }}
+                            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition-colors"
+                        >
+                            Entrar
+                        </button>
+                        <div className="text-center pt-2">
+                            <button onClick={() => setView('setup')} className="text-sm text-gray-500 hover:text-orange-500 transition-colors">
+                                Volver a configuración inicial
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {view === 'setup' && step === 2 && (
                     <div className="space-y-4">
                         <h2 className="text-xl font-semibold flex items-center"><Building className="mr-2 text-orange-500" /> Identidad de Empresa</h2>
                         <input
@@ -187,7 +242,7 @@ const Onboarding = () => {
                     </div>
                 )}
 
-                {step === 3 && (
+                {view === 'setup' && step === 3 && (
                     <div className="space-y-6">
                         <h2 className="text-xl font-semibold flex items-center"><Palette className="mr-2 text-orange-500" /> Personalización</h2>
 

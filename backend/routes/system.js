@@ -13,6 +13,16 @@ router.get('/info', (req, res) => {
     res.json({ ip });
 });
 
+// Get System Configuration
+router.get('/config', async (req, res) => {
+    try {
+        const config = await prisma.systemConfig.findFirst();
+        res.json(config);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Soft Reset / Clear Data
 router.post('/reset', async (req, res) => {
     try {

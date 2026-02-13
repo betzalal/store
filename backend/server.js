@@ -22,6 +22,7 @@ const userRoutes = require('./routes/users');
 const memoryRoutes = require('./routes/memory');
 const setupRoutes = require('./routes/setup'); // Import setup routes
 const systemRoutes = require('./routes/system');
+const expenseRoutes = require('./routes/expenses');
 
 app.use('/api/stores', storeRoutes);
 app.use('/api/inventory', inventoryRoutes);
@@ -30,6 +31,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/memory', memoryRoutes);
 app.use('/api/setup', setupRoutes); // Use setup routes
 app.use('/api/system', systemRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 app.get('/', (req, res) => {
     res.send('Store Management API is running');

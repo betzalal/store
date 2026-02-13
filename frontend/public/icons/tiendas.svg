@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <rect x="20" y="40" width="60" height="40" rx="4" fill="#ffffff" fill-opacity="0.3" stroke="currentColor" stroke-width="2" />
+  <path d="M15 40L50 20L85 40" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="40" y="55" width="20" height="25" rx="2" stroke="currentColor" stroke-width="2" />
+  <line x1="20" y1="40" x2="80" y2="40" stroke="currentColor" stroke-width="2" />
+  <!-- Sparkles -->
+  <circle cx="85" cy="30" r="2.5" fill="#22c55e" />
+  <circle cx="15" cy="25" r="1.5" fill="#facc15" />
+</svg>

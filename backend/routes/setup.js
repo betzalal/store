@@ -129,7 +129,7 @@ router.get('/backgrounds', (req, res) => {
         // Map to URLs
         const backgrounds = images.map(file => ({
             name: file.replace(/\.[^/.]+$/, ""), // remove extension for name
-            url: `/fondos/${file}`
+            url: `/fondos/${encodeURIComponent(file)}`
         }));
 
         res.json(backgrounds);

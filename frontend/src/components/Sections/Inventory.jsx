@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import { useStore } from '../../context/StoreContext';
 
 const Inventory = () => {
+    const { activeStore, isEmpresaMode } = useStore();
     const [products, setProducts] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/inventory')
+        const storeId = (!isEmpresaMode && activeStore) ? activeStore.id : '';
+        fetch(`http://localhost:3001/api/inventory?storeId=${storeId}`)
             .then(res => res.json())
             .then(data => setProducts(data))
             .catch(err => console.error(err));
-    }, []);
+    }, [activeStore, isEmpresaMode]);
 
     return (
         <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow">

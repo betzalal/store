@@ -1,18 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import { useStore } from '../../context/StoreContext';
 
 const Sales = () => {
+    const { activeStore, isEmpresaMode } = useStore();
     const [sales, setSales] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/sales')
+        const storeId = (!isEmpresaMode && activeStore) ? activeStore.id : '';
+        fetch(`http://localhost:3001/api/sales?storeId=${storeId}`)
             .then(res => res.json())
             .then(data => setSales(data))
             .catch(err => console.error(err));
-    }, []);
+    }, [activeStore, isEmpresaMode]);
 
     return (
         <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow">
-            <h2 className="text-2xl font-bold mb-4">Registro de Ventas</h2>
+            <h2 className="text-2xl font-bold mb-4">
+                {isEmpresaMode ? 'Registro Global de Ventas' : `Ventas - ${activeStore?.name || 'Cargando...'}`}
+            </h2>
             <div className="space-y-4">
                 {sales.map((sale) => (
                     <div key={sale.id} className="border-b border-gray-200 dark:border-gray-700 pb-4">

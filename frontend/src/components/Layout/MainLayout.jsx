@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Menu, X, Sun, Moon, Bell, Search, Settings } from 'lucide-react';
-
+import { Menu, X, DollarSign, Settings, Search } from 'lucide-react';
 import OptionsMenu from '../Options/OptionsMenu';
+import { useStore } from '../../context/StoreContext';
 
 const MainLayout = ({ children }) => {
     const [isDark, setIsDark] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
     const [config, setConfig] = useState({ companyName: 'MagicStore', logoUrl: null, backgroundUrl: null });
+    const [balance, setBalance] = useState(0);
+    const { activeStore, isEmpresaMode } = useStore();
     const location = useLocation();
 
     useEffect(() => {
@@ -17,7 +19,6 @@ const MainLayout = ({ children }) => {
             .then(data => {
                 if (data.config) {
                     setConfig(data.config);
-                    // Apply theme preference from DB if needed
                     if (data.config.themeMode === 'light') {
                         setIsDark(false);
                         document.documentElement.classList.remove('dark');
@@ -29,6 +30,23 @@ const MainLayout = ({ children }) => {
             })
             .catch(err => console.error("Config fetch failed", err));
     }, []);
+
+    useEffect(() => {
+        const fetchBalance = async () => {
+            try {
+                const storeId = (!isEmpresaMode && activeStore) ? activeStore.id : '';
+                const res = await fetch(`http://localhost:3001/api/expenses/total?storeId=${storeId}`);
+                const data = await res.json();
+                setBalance(data.total || 0);
+            } catch (err) {
+                console.error("Balance fetch failed", err);
+            }
+        };
+
+        fetchBalance();
+        const interval = setInterval(fetchBalance, 10000); // Polling for updates
+        return () => clearInterval(interval);
+    }, [activeStore, isEmpresaMode]);
 
     const toggleTheme = async () => {
         const newIsDark = !isDark;
@@ -66,12 +84,13 @@ const MainLayout = ({ children }) => {
     };
 
     const navItems = [
-        { name: 'Dashboard', path: '/' },
+        { name: 'Inicio', path: '/' },
         { name: 'Tiendas', path: '/stores' },
         { name: 'Ventas', path: '/sales' },
         { name: 'Inventarios', path: '/inventory' },
         { name: 'Usuarios', path: '/users' },
-        { name: 'Memoria', path: '/memory' }
+        { name: 'Memoria', path: '/memory' },
+        { name: 'Gastos', path: '/gastos' }
     ];
 
     return (
@@ -136,9 +155,11 @@ const MainLayout = ({ children }) => {
                         </div>
 
                         {/* Balance Pill */}
-                        <div className="hidden sm:flex items-center bg-dark-card border border-dark-border rounded-full px-3 py-1.5 space-x-2">
-                            <div className="w-2 h-2 rounded-full bg-dark-accent animate-pulse"></div>
-                            <span className="text-xs font-mono text-gray-300">$ 1,250.00</span>
+                        <div className="hidden sm:flex items-center bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-1.5 space-x-2 backdrop-blur-sm group hover:bg-orange-500/20 transition-all cursor-pointer">
+                            <DollarSign className="w-3.5 h-3.5 text-orange-500" />
+                            <span className="text-xs font-black text-orange-500 tracking-wider">
+                                {balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
                         </div>
 
                         {/* Options Button (Replaces Theme Toggle) */}
