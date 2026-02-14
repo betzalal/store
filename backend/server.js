@@ -26,6 +26,7 @@ const expenseRoutes = require('./routes/expenses');
 
 app.use('/api/stores', storeRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/products', require('./routes/products')); // New Products Route
 app.use('/api/sales', salesRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/memory', memoryRoutes);

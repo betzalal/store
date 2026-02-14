@@ -1,0 +1,6 @@
+He encontrado la causa principal de los errores:
+
+Ajuste de Stock: El sistema estaba configurado para usar números enteros (1, 2, 3...) en el historial, pero como ahora permitimos decimales (kilos, metros...), el servidor fallaba al intentar guardar un cambio de stock con decimales. Voy a actualizar la base de datos para que acepte decimales en todas partes.
+Tamaño de Código: Lo devolveré a su tamaño original para que coincida con el resto de la tabla.
+Imágenes: Hay un pequeño error en la ruta donde se guardan las fotos. Lo corregiré para que se muestren correctamente una vez subidas.
+Ya he actualizado el plan de implementación con estos cambios. ¿Me das el visto bueno para aplicar estas correcciones?

@@ -31,24 +31,67 @@ model Expense {
 }
 
 model Product {
-  id        Int      @id @default(autoincrement())
-  name      String
-  price     Float
-  stock     Int
-  storeId   Int
-  store     Store    @relation(fields: [storeId], references: [id])
-  sales     SaleItem[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  code          String   @default("PROD-000") // Removed global @unique
+  name          String
+  category      String   @default("General")
+  unit          String?  @default("pz")
+  price         Float
+  providerPrice Float?   @default(0)
+  providerName  String?
+  comparePrice  Float?   @default(0)
+  imageUrl      String?
+  stock         Float    @default(0) // Changed to Float for weight/volume/area units
+  storeId       Int
+  store         Store    @relation(fields: [storeId], references: [id])
+  sales         SaleItem[]
+  history       ProductHistory[]
+  
+  @@unique([code, storeId]) // Unique code per store
+  
+  // Bundling Support
+  isBundle      Boolean           @default(false)
+  components    BundleComponent[] @relation("BundleParent")
+  partOfBundles BundleComponent[] @relation("BundleChild")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model BundleComponent {
+  id          Int     @id @default(autoincrement())
+  bundleId    Int
+  bundle      Product @relation("BundleParent", fields: [bundleId], references: [id])
+  componentId Int
+  component   Product @relation("BundleChild", fields: [componentId], references: [id])
+  quantity    Float
+}
+
+model ProductHistory {
+  id          Int      @id @default(autoincrement())
+  type        String   // Ej: "Ingreso", "Salida", "Edición"
+  quantity    Float
+  date        DateTime @default(now())
+  details     String?
+  productId   Int
+  product     Product  @relation(fields: [productId], references: [id])
 }
 
 model Sale {
-  id        Int        @id @default(autoincrement())
-  storeId   Int
-  store     Store      @relation(fields: [storeId], references: [id])
-  total     Float
-  items     SaleItem[]
-  date      DateTime   @default(now())
+  id           Int        @id @default(autoincrement())
+  storeId      Int
+  store        Store      @relation(fields: [storeId], references: [id])
+  total        Float
+  items        SaleItem[]
+  date         DateTime   @default(now())
+  status       String     @default("Completed") // Completed, Canceled, Returned, Donated
+  customerName String?    @default("Cliente General")
+  customerNit   String?
+  customerWhatsapp String?
+  orderType     String     @default("Venta en Tienda") // Venta en Tienda, Envio, Orden, Reserva, Cotizacion
+  paymentMethod String     @default("Cash") // Cash, QR, Deposito
+  discount      Float?     @default(0)
+  couponCode    String?
 }
 
 model SaleItem {
@@ -57,7 +100,7 @@ model SaleItem {
   sale      Sale    @relation(fields: [saleId], references: [id])
   productId Int
   product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
+  quantity  Float
   price     Float
 }
 

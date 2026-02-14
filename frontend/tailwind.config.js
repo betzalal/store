@@ -9,17 +9,18 @@ export default {
         extend: {
             colors: {
                 dark: {
-                    bg: '#000000', // True black
-                    card: '#120505', // Slightly reddish black
-                    border: '#331111', // Reddish border
-                    text: '#ffffff',
-                    accent: '#ff4d00' // Hot Orange/Red
+                    bg: '#0f172a', // Slate 900
+                    card: '#1e293b', // Slate 800
+                    border: '#334155', // Slate 700
+                    text: '#f8fafc', // Slate 50
+                    accent: '#3b82f6' // Blue 500
                 },
                 light: {
-                    bg: '#fff7ed', // Warm white
+                    bg: '#f8fafc', // Slate 50
                     card: '#ffffff',
-                    text: '#111827',
-                    accent: '#ea580c' // Orange-600
+                    text: '#0f172a', // Slate 900
+                    border: '#e2e8f0', // Slate 200
+                    accent: '#2563eb' // Blue 600
                 }
             },
             fontFamily: {

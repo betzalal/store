@@ -2,19 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Store, Building2, Trash2, Check, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
-const StoreSelectionModal = ({ isOpen, onClose }) => {
+const StoreSelectionModal = ({ isOpen, onClose, initialCreateMode = false }) => {
     const { activeStore, selectStore } = useStore();
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isCreating, setIsCreating] = useState(false);
+    const [isCreating, setIsCreating] = useState(initialCreateMode);
     const [newStore, setNewStore] = useState({ name: '', location: '' });
     const [user, setUser] = useState({ isAdmin: true }); // Temporary mock, should come from Auth
 
     useEffect(() => {
         if (isOpen) {
+            setIsCreating(initialCreateMode);
             fetchStores();
         }
-    }, [isOpen]);
+    }, [isOpen, initialCreateMode]);
 
     const fetchStores = async () => {
         try {
@@ -77,27 +78,8 @@ const StoreSelectionModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="p-8 max-h-[60vh] overflow-y-auto space-y-6">
-                    {/* Global Option */}
-                    <button
-                        onClick={() => { selectStore('empresa'); onClose(); }}
-                        className={`w-full group relative p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between
-                            ${activeStore === 'empresa'
-                                ? 'border-orange-500 bg-orange-50 dark:bg-orange-500/10'
-                                : 'border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'}`}
-                    >
-                        <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-lg">
-                                <Building2 className="w-6 h-6" />
-                            </div>
-                            <div className="text-left">
-                                <div className="font-bold text-gray-900 dark:text-white">Vista Empresa</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Acceso global a todas las tiendas e inventarios</div>
-                            </div>
-                        </div>
-                        {activeStore === 'empresa' && <Check className="w-6 h-6 text-orange-500" />}
-                    </button>
-
-                    <div className="flex items-center justify-between pt-4">
+                    {/* Stores List */}
+                    <div className="flex items-center justify-between pt-0">
                         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tiendas Disponibles</h3>
                         {user.isAdmin && (
                             <button

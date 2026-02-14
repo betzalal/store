@@ -6,6 +6,7 @@ import Onboarding from './components/Onboarding/Onboarding';
 import Stores from './components/Sections/Stores';
 import Inventory from './components/Sections/Inventory';
 import Sales from './components/Sections/Sales';
+import Products from './components/Sections/Products';
 import Gastos from './components/Sections/Gastos';
 import Users from './components/Sections/Users';
 import Memory from './components/Sections/Memory';
@@ -47,6 +48,7 @@ function App() {
                                     <Route path="/" element={<Dashboard />} />
                                     <Route path="/stores" element={<Stores />} />
                                     <Route path="/inventory" element={<Inventory />} />
+                                    <Route path="/products" element={<Products />} />
                                     <Route path="/sales" element={<Sales />} />
                                     <Route path="/gastos" element={<Gastos />} />
                                     <Route path="/users" element={<Users />} />
