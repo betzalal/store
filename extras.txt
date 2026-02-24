@@ -1,0 +1,40 @@
+EXTRAS
+
+historial de clientes
+
+📦 Inventario inteligente
+
+Kardex automático
+
+Lotes y fechas de vencimiento
+
+reportes
+
+margen real de ganancia 
+
+flujos de caja 
+
+📍 IDEA 3 — Mapa en tiempo real
+
+Ver todas las sucursales en mapa:
+
+stock
+
+ventas hoy
+
+alertas
+
+Visual y poderoso.
+
+👤 IDEA 5 — CRM automático
+
+La app crea:
+
+clientes frecuentes
+
+hábitos de compra
+
+recordatorios de recompra
+
+Ejemplo:
+“Este cliente compra cada 20 días.”

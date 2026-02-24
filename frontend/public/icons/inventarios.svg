@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Iso Box -->
+  <path d="M50 20L85 40L50 60L15 40L50 20Z" fill="#ffffff" fill-opacity="0.4" stroke="currentColor" stroke-width="2" />
+  <path d="M15 40V70L50 90V60L15 40Z" fill="#ffffff" fill-opacity="0.2" stroke="currentColor" stroke-width="2" />
+  <path d="M85 40V70L50 90V60L85 40Z" fill="#ffffff" fill-opacity="0.1" stroke="currentColor" stroke-width="2" />
+  <!-- Content -->
+  <circle cx="50" cy="40" r="5" fill="#22c55e" />
+  <!-- Sparkles -->
+  <circle cx="75" cy="25" r="2" fill="#facc15" />
+</svg>
