@@ -182,6 +182,13 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Version Number */}
+                <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400/50 dark:text-gray-500/50 bg-white/30 dark:bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-white/5 shadow-sm">
+                        v1.1
+                    </span>
+                </div>
             </div>
         </div>
     );
