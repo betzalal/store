@@ -20,6 +20,7 @@ const Sales = () => {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState(null);
+    const [isFastSale, setIsFastSale] = useState(false);
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
@@ -79,7 +80,33 @@ const Sales = () => {
             })
             .catch(err => console.error("Config fetch failed", err));
 
+        const savedFastSale = localStorage.getItem('fastSale');
+        if (savedFastSale === 'true') {
+            setIsFastSale(true);
+        }
     }, [activeStore, isEmpresaMode]);
+
+    // Handle Fast Sale Toggle Storage Sync
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const savedFastSale = localStorage.getItem('fastSale');
+            setIsFastSale(savedFastSale === 'true');
+        };
+        window.addEventListener('storage', handleStorageChange);
+
+        // Also poll just in case because local storage events don't fire on the same tab
+        const interval = setInterval(() => {
+            const savedFastSale = localStorage.getItem('fastSale');
+            if ((savedFastSale === 'true') !== isFastSale) {
+                setIsFastSale(savedFastSale === 'true');
+            }
+        }, 2000);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            clearInterval(interval);
+        };
+    }, [isFastSale]);
 
     useEffect(() => {
         if (lastSale && receiptRef.current) {
@@ -490,7 +517,7 @@ const Sales = () => {
         }
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (fastCheckout = false) => {
         if (!activeStore) return alert('Seleccione una sucursal');
         if (cart.length === 0) return;
 
@@ -531,22 +558,24 @@ const Sales = () => {
                     paymentMethod: checkoutData.paymentMethod
                 });
 
-                if (autoPrint) {
+                if (autoPrint && !fastCheckout) {
                     setTimeout(() => window.print(), 500);
                 }
 
-                printReceipt({
-                    id: saleData.id,
-                    total: parseFloat(finalTotalStr),
-                    orderType: checkoutData.deliveryType,
-                    paymentMethod: checkoutData.paymentMethod,
-                    customer: checkoutData.customerName || 'Cliente General',
-                    store: activeStore?.name,
-                    user: currentUser?.username,
-                    date: new Date().toLocaleString('es-ES'),
-                    couponCode: checkoutData.couponCode,
-                    discount: checkoutData.discountAmount
-                });
+                if (!fastCheckout) {
+                    printReceipt({
+                        id: saleData.id,
+                        total: parseFloat(finalTotalStr),
+                        orderType: checkoutData.deliveryType,
+                        paymentMethod: checkoutData.paymentMethod,
+                        customer: checkoutData.customerName || 'Cliente General',
+                        store: activeStore?.name,
+                        user: currentUser?.username,
+                        date: new Date().toLocaleString('es-ES'),
+                        couponCode: checkoutData.couponCode,
+                        discount: checkoutData.discountAmount
+                    });
+                }
 
                 setCart([]);
                 setCheckoutData({ deliveryType: 'En Tienda', paymentMethod: 'Cash', customerName: '', customerNit: '', customerPhone: '', couponCode: '', discountAmount: 0 });
@@ -570,6 +599,24 @@ const Sales = () => {
         if (inventoryAlerts.lowStock > 0) return 'bg-yellow-500';
         return 'bg-emerald-500';
     };
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Enter' && isFastSale && cart.length > 0 && !isCheckoutOpen) {
+                // Ignore if we are typing in an input field (like search or qty)
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    // Only prevent if it's the search bar, allow Enter on Qty fields to close them and we don't accidentally checkout
+                    if (e.target.placeholder === "Buscar productos...") return;
+                    if (e.target.tagName === 'INPUT') return;
+                }
+
+                handleCheckout(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isFastSale, cart, isCheckoutOpen, activeStore, checkoutData]);
 
     const bgUrl = config?.backgroundUrl
         ? (config.backgroundUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${config.backgroundUrl}` : config.backgroundUrl)
@@ -950,11 +997,11 @@ const Sales = () => {
                                 </div>
 
                                 <button
-                                    onClick={() => setIsCheckoutOpen(true)}
+                                    onClick={() => isFastSale ? handleCheckout(true) : setIsCheckoutOpen(true)}
                                     disabled={cart.length === 0}
-                                    className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white rounded-xl font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-600/30 disabled:opacity-50 disabled:grayscale transition-all flex items-center justify-center gap-3 text-xs group"
+                                    className={`w-full py-3.5 ${isFastSale ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 shadow-orange-500/30' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/30'} active:scale-[0.98] text-white rounded-xl font-black uppercase tracking-[0.2em] shadow-xl disabled:opacity-50 disabled:grayscale transition-all flex items-center justify-center gap-3 text-xs group`}
                                 >
-                                    <span>Cobrar</span>
+                                    <span>{isFastSale ? 'Venta Rápida (Enter)' : 'Cobrar'}</span>
                                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>

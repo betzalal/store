@@ -53,9 +53,17 @@ const Card = ({ title, iconName, path, tagline }) => {
     const navigate = useNavigate();
     const [isHovered, setIsHovered] = useState(false);
 
+    const handleClick = () => {
+        if (path === '/settings') {
+            window.dispatchEvent(new Event('open-settings'));
+        } else {
+            navigate(path);
+        }
+    };
+
     return (
         <div
-            onClick={() => navigate(path)}
+            onClick={handleClick}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             className="group relative bg-white/10 dark:bg-black/20 backdrop-blur-2xl rounded-3xl overflow-hidden transition-all duration-700 hover:-translate-y-3 cursor-pointer border border-white/20 dark:border-white/5 hover:border-orange-500/50 shadow-2xl"

@@ -62,6 +62,12 @@ const MainLayout = ({ children }) => {
         return () => clearInterval(interval);
     }, [activeStore, isEmpresaMode]);
 
+    useEffect(() => {
+        const handleOpenSettings = () => setIsOptionsOpen(true);
+        window.addEventListener('open-settings', handleOpenSettings);
+        return () => window.removeEventListener('open-settings', handleOpenSettings);
+    }, []);
+
     const toggleTheme = async () => {
         const newIsDark = !isDark;
         setIsDark(newIsDark);

@@ -6,6 +6,8 @@ const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
 const app = express();
+app.set('trust proxy', true); // Trust reverse proxy headers like X-Forwarded-For
+
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 

@@ -6,10 +6,17 @@ const prisma = new PrismaClient();
 // Get System Info (IP, etc)
 router.get('/info', (req, res) => {
     let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    // Clean up IP format if it's ::ffff:127.0.0.1
-    if (ip.substr(0, 7) == "::ffff:") {
-        ip = ip.substr(7);
+
+    // Clean up IP format if it's ::ffff:127.0.0.1 (IPv4-mapped IPv6)
+    if (ip && ip.startsWith("::ffff:")) {
+        ip = ip.substring(7);
     }
+
+    // Also handle ::1 (IPv6 localhost) natively
+    if (ip === '::1') {
+        ip = '127.0.0.1';
+    }
+
     res.json({ ip });
 });
 

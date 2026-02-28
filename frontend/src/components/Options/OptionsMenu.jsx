@@ -6,6 +6,7 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
     const [user, setUser] = useState({ username: 'Guest', role: 'Visitor' });
     const [backgrounds, setBackgrounds] = useState([]);
     const [activeTab, setActiveTab] = useState('general'); // general, appearance
+    const [fastSale, setFastSale] = useState(false);
 
     useEffect(() => {
         // Fetch System Info
@@ -19,15 +20,24 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
             .then(data => setUser(data))
             .catch(() => setUser({ username: 'Admin Loop', role: 'admin' }));
 
-        // Fetch All Users
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users`)
-            .then(res => res.json())
-            .then(data => setUsers(data));
 
         // Fetch Backgrounds
         fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/setup/backgrounds`)
-            .then(res => res.json())
-            .then(data => setBackgrounds(data));
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok');
+                return res.json();
+            })
+            .then(data => setBackgrounds(Array.isArray(data) ? data : []))
+            .catch(err => {
+                console.error("Error fetching backgrounds:", err);
+                setBackgrounds([]);
+            });
+
+        // Initialize Fast Sale from Local Storage
+        const savedFastSale = localStorage.getItem('fastSale');
+        if (savedFastSale === 'true') {
+            setFastSale(true);
+        }
     }, []);
 
     const saveConfig = () => {
@@ -104,9 +114,28 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
                                         <span className="text-sm text-gray-600 dark:text-gray-300">Dirección IP</span>
                                         <span className="font-mono text-sm text-gray-900 dark:text-white bg-gray-200 dark:bg-black/40 px-2 py-1 rounded">{ip}</span>
                                     </div>
-                                    <div className="flex justify-between items-center py-2">
+                                    <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
                                         <span className="text-sm text-gray-600 dark:text-gray-300">Estado del Sistema</span>
                                         <span className="text-sm text-green-500 font-medium flex items-center"><div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" /> Online</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-2">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm text-gray-600 dark:text-gray-300 font-bold">Modo Venta Rápida</span>
+                                            <span className="text-xs text-gray-400">Saltar datos de cliente y recibo para agilizar ventas</span>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={fastSale}
+                                                onChange={(e) => {
+                                                    const val = e.target.checked;
+                                                    setFastSale(val);
+                                                    localStorage.setItem('fastSale', val);
+                                                }}
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -137,7 +166,7 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">Fondo de Pantalla</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        {backgrounds.map((bg) => (
+                                        {(Array.isArray(backgrounds) ? backgrounds : []).map((bg) => (
                                             <div
                                                 key={bg.url}
                                                 onClick={() => onBackgroundChange(bg.url)}

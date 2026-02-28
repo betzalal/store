@@ -121,31 +121,72 @@ router.post('/:id/adjust', async (req, res) => {
     try {
         const { id } = req.params;
         const { quantity, type, details } = req.body; // type: 'Ingreso' or 'Salida'
+        const adjustQuantity = parseFloat(quantity);
 
-        const product = await prisma.product.findUnique({ where: { id: parseInt(id) } });
+        const product = await prisma.product.findUnique({
+            where: { id: parseInt(id) },
+            include: { components: true } // Include bundle components to adjust their stock
+        });
+
         if (!product) return res.status(404).send('Product not found');
 
         const newStock = type === 'Ingreso'
-            ? product.stock + parseFloat(quantity)
-            : product.stock - parseFloat(quantity);
+            ? product.stock + adjustQuantity
+            : product.stock - adjustQuantity;
 
-        const updatedProduct = await prisma.product.update({
-            where: { id: parseInt(id) },
-            data: {
-                stock: newStock,
-                history: {
-                    create: {
-                        type,
-                        quantity: parseFloat(quantity),
-                        details: details || `Ajuste manual: ${type}`
+        // Perform adjustment in a transaction if it's a bundle to ensure atomicity
+        const updatedProduct = await prisma.$transaction(async (tx) => {
+            // 1. Update the main product (bundle or regular)
+            const updated = await tx.product.update({
+                where: { id: parseInt(id) },
+                data: {
+                    stock: newStock,
+                    history: {
+                        create: {
+                            type,
+                            quantity: adjustQuantity,
+                            details: details || `Ajuste manual: ${type}`
+                        }
                     }
+                },
+                include: { history: { orderBy: { date: 'desc' } } }
+            });
+
+            // 2. If it's a bundle, adjust the stock of its components inversely
+            if (product.isBundle && product.components && product.components.length > 0) {
+                for (const comp of product.components) {
+                    const compQuantityUsed = comp.quantity * adjustQuantity;
+
+                    // If bundle increases (Ingreso), components decrease (Salida)
+                    // If bundle decreases (Salida), components increase (Ingreso)
+                    const compNewStock = type === 'Ingreso'
+                        ? { decrement: compQuantityUsed }
+                        : { increment: compQuantityUsed };
+
+                    const compHistoryType = type === 'Ingreso' ? 'Salida' : 'Ingreso';
+
+                    await tx.product.update({
+                        where: { id: comp.componentId },
+                        data: {
+                            stock: compNewStock,
+                            history: {
+                                create: {
+                                    type: compHistoryType,
+                                    quantity: compQuantityUsed,
+                                    details: `Por ajuste de producto compuesto base: ${product.name} (${type})`
+                                }
+                            }
+                        }
+                    });
                 }
-            },
-            include: { history: { orderBy: { date: 'desc' } } }
+            }
+
+            return updated;
         });
 
         res.json(updatedProduct);
     } catch (error) {
+        console.error('Error adjusting stock:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -239,6 +280,60 @@ router.post('/transfer', async (req, res) => {
         res.json({ success: true, message: 'Transfer completed successfully' });
     } catch (error) {
         console.error("Transfer Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Item from Inventory
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await prisma.product.findUnique({
+            where: { id: parseInt(id) },
+            include: { components: true }
+        });
+
+        if (!product) return res.status(404).json({ error: 'Product not found' });
+
+        await prisma.$transaction(async (tx) => {
+            // Restore components if the bundle had stock
+            if (product.isBundle && product.stock > 0 && product.components && product.components.length > 0) {
+                for (const comp of product.components) {
+                    const compQuantityToRestore = comp.quantity * product.stock;
+
+                    await tx.product.update({
+                        where: { id: comp.componentId },
+                        data: {
+                            stock: { increment: compQuantityToRestore },
+                            history: {
+                                create: {
+                                    type: 'Ingreso',
+                                    quantity: compQuantityToRestore,
+                                    details: `Restaurado por eliminación de producto compuesto: ${product.name}`
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Cleanup related child records (history, bundle components)
+            // Prisma does not automatically cascade delete these unless configured in schema.
+            // But doing it manually just in case to avoid foreign key constraints errors:
+            await tx.productHistory.deleteMany({ where: { productId: parseInt(id) } });
+            await tx.saleItem.deleteMany({ where: { productId: parseInt(id) } });
+            await tx.bundleComponent.deleteMany({ where: { OR: [{ bundleId: parseInt(id) }, { componentId: parseInt(id) }] } });
+
+            // Finally, delete the product
+            await tx.product.delete({
+                where: { id: parseInt(id) }
+            });
+        });
+
+        res.json({ success: true, message: 'Producto eliminado correctamente' });
+    } catch (error) {
+        console.error("Delete Error:", error);
         res.status(500).json({ error: error.message });
     }
 });

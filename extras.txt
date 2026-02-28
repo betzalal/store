@@ -38,3 +38,11 @@ recordatorios de recompra
 
 Ejemplo:
 “Este cliente compra cada 20 días.”
+
+--------------------------------
+
+arreglos urgente - primer parche
+
+1.- no se puede ver opciones - sale errores en el codigo
+2.- no se puede borrar archivos de productos o inventarios
+3.- deberia del inventario total, eliminarse los que son que lo arman - si el filtro uso 2 de algo, al armarlo, deberia reducirse del total de ese item.
