@@ -7,14 +7,24 @@ import {
     ChevronUp, Download, DollarSign, Store, Layers, Trash2, Edit2
 } from 'lucide-react';
 import OrderStock from './OrderStock';
+import ExpirationCalendar from './ExpirationCalendar';
+
+import StoreSelectionModal from '../Dashboard/StoreSelectionModal';
+import { useAuth } from '../../context/AuthContext';
 
 const Inventory = () => {
     const { activeStore } = useStore();
+    const { currentUser } = useAuth();
+    
+    // Check if user is admin (can edit). Contadors can only view.
+    const canEdit = currentUser?.role === 'admin';
+
     // Unified check: Global view is active if mode is 'empresa' OR store is null/undefined
     // const isGlobalView = isEmpresaMode || !activeStore || activeStore === 'empresa'; // REMOVED
-
-
     const [products, setProducts] = useState([]);
+    const hasExpirations = useMemo(() => {
+        return products.some(p => p.expirationDate != null);
+    }, [products]);
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +41,10 @@ const Inventory = () => {
     const [transferModal, setTransferModal] = useState(null); // { product: Product }
     const [editModal, setEditModal] = useState(null); // { product: Product }
     const [selectedTransferProductId, setSelectedTransferProductId] = useState("");
+    const [createVariantModal, setCreateVariantModal] = useState(null); // { parent: Product }
+    const [expandedParents, setExpandedParents] = useState({});
+    
+    const toggleExpand = (id) => setExpandedParents(prev => ({ ...prev, [id]: !prev[id] }));
 
     const handleImageUpload = async (e, productId) => {
         const file = e.target.files[0];
@@ -56,6 +70,25 @@ const Inventory = () => {
     useEffect(() => {
         fetchData();
     }, [activeStore, activeTab, selectedStoreId]);
+
+    const handleDeleteHistory = async (historyId) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este registro histórico y revertir el stock?')) return;
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/inventory/history/${historyId}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                setHistoryPopup(null);
+                fetchData();
+            } else {
+                alert('Error al eliminar registro');
+            }
+        } catch (error) {
+            console.error('Error deleting history:', error);
+            alert('Error de conexión');
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -169,6 +202,50 @@ const Inventory = () => {
 
     const visibleProducts = getVisibleProducts();
 
+    // --- VARIANT GROUPING LOGIC ---
+    const { parentProducts, childrenMap } = useMemo(() => {
+        const parents = [];
+        const chMap = {};
+
+        // 1. First pass, sort out visible products
+        (visibleProducts || []).forEach(p => {
+            if (!p.parentId) {
+                parents.push(p);
+            } else {
+                if (!chMap[p.parentId]) chMap[p.parentId] = [];
+                chMap[p.parentId].push(p);
+            }
+        });
+
+        // 2. Second pass, if a child matched search but its parent didn't, we still need to show the parent
+        (visibleProducts || []).forEach(p => {
+            if (p.parentId && !parents.find(parent => parent.id === p.parentId)) {
+                // Find parent in FULL products array
+                const parent = products.find(parent => parent.id === p.parentId);
+                if (parent && !parents.find(par => par.id === parent.id)) {
+                    parents.push(parent);
+                }
+            }
+        });
+
+        // 3. (Optional) Should we fetch all children for visible parents even if children didn't match search?
+        // Let's only fetch children if they matched search, OR if search is empty, they'll all be there.
+        // Wait, if search is empty, all children match.
+        // If we search "Coca", parent matches, but variant "1 Litro" doesn't strictly have "Coca" in it (unless we name it Coca - 1 Litro). 
+        // We probably WANT to show all children of a parent if the parent matches search.
+        parents.forEach(parent => {
+            const allChildrenForParent = products.filter(p => p.parentId === parent.id);
+            allChildrenForParent.forEach(child => {
+                if (!chMap[parent.id]) chMap[parent.id] = [];
+                if (!chMap[parent.id].find(c => c.id === child.id)) {
+                    chMap[parent.id].push(child);
+                }
+            });
+        });
+
+        return { parentProducts: parents, childrenMap: chMap };
+    }, [visibleProducts, products]);
+
     const currentStats = useMemo(() => {
         const data = visibleProducts;
 
@@ -270,6 +347,7 @@ const Inventory = () => {
                     </div>
                 </div>
 
+                {canEdit && (
                 <button
                     onClick={() => {
                         setTransferModal({ isGeneral: true });
@@ -288,12 +366,13 @@ const Inventory = () => {
                         <p className="text-xs font-bold text-indigo-200 mt-1 uppercase tracking-widest">Mover inventario entre tiendas</p>
                     </div>
                 </button>
+                )}
             </div>
 
             {/* Tab Navigation */}
             <div className="no-print flex items-center justify-between border-b border-gray-100 dark:border-white/10 mt-4">
                 <div className="flex items-center space-x-8 px-2 overflow-x-auto">
-                    {['Inventory', 'Inventario Tiendas', 'Order Stock'].map(tab => (
+                    {['Inventory', 'Inventario Tiendas', 'Order Stock', ...(hasExpirations ? ['Vencimientos'] : [])].map(tab => (
                         <button
                             key={tab}
                             onClick={() => {
@@ -321,6 +400,7 @@ const Inventory = () => {
                         </button>
                     )}
 
+                    {canEdit && (
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="mb-4 flex items-center space-x-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-500/20 transition-all hover:scale-105"
@@ -328,6 +408,7 @@ const Inventory = () => {
                         <Plus className="w-4 h-4" />
                         <span>Nuevo Producto</span>
                     </button>
+                    )}
                 </div>
             </div>
 
@@ -336,12 +417,17 @@ const Inventory = () => {
                 <OrderStock products={products} />
             )}
 
-            {/* 2. INVENTARIO TIENDAS - LIST VIEW */}
+            {/* 2. VENCIMIENTOS (CALENDAR) */}
+            {activeTab === 'Vencimientos' && (
+                <ExpirationCalendar products={products} />
+            )}
+
+            {/* 3. INVENTARIO TIENDAS - LIST VIEW */}
             {activeTab === 'Inventario Tiendas' && !selectedStoreId && (
                 renderStoreList()
             )}
 
-            {/* 3. TABLE VIEWS */}
+            {/* 4. TABLE VIEWS */}
             {((activeTab === 'Inventory') || (activeTab === 'Inventario Tiendas' && selectedStoreId)) && (
                 <>
                     {/* Controls Bar */}
@@ -407,147 +493,181 @@ const Inventory = () => {
                                                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto" />
                                             </td>
                                         </tr>
-                                    ) : (visibleProducts || []).map((p, idx) => {
-                                        const lastMovement = p.history?.[0];
-                                        const displayStock = p.totalStock !== undefined ? p.totalStock : p.stock;
+                                    ) : parentProducts.map((parentProd, idx) => {
+                                        const hasVariants = childrenMap[parentProd.id] && childrenMap[parentProd.id].length > 0;
+                                        const isExpanded = expandedParents[parentProd.id];
 
-                                        const status = displayStock === 0
-                                            ? { text: 'Agotado', bg: 'bg-red-500' }
-                                            : displayStock <= 10
-                                                ? { text: 'Bajo Stock', bg: 'bg-amber-500' }
-                                                : { text: 'Disponible', bg: 'bg-emerald-500' };
-                                        return (
-                                            <tr key={p.id || idx} className="hover:bg-blue-50/30 dark:hover:bg-blue-500/5 transition-colors group block md:table-row bg-white dark:bg-dark-card md:bg-transparent rounded-2xl mb-4 md:mb-0 shadow-sm md:shadow-none border border-gray-100 dark:border-white/5 md:border-none relative p-4 md:p-0">
-                                                <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                    <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Código</span>
-                                                    <span className="text-xs font-black font-mono text-gray-400">
-                                                        {p.code?.substring(0, 4) || '----'}
-                                                    </span>
-                                                </td>
+                                        const renderRow = (p, isVariant = false) => {
+                                            const lastMovement = p.history?.[0];
+                                            const displayStock = p.totalStock !== undefined ? p.totalStock : p.stock;
 
-                                                <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                    <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Producto</span>
-                                                    <div className="flex items-center space-x-4">
-                                                        <button
-                                                            onClick={() => {
-                                                                setUploadingFor(p.id);
-                                                                fileInputRef.current.click();
-                                                            }}
-                                                            className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-white/5 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-white/10 group-hover:border-blue-200 transition-all hover:scale-110 relative group/icon"
-                                                        >
-                                                            {p.imageUrl ? (
-                                                                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <Box className="w-5 h-5 text-gray-300 group-hover:text-blue-400 transition-colors" />
+                                            const status = displayStock === 0
+                                                ? { text: 'Agotado', bg: 'bg-red-500' }
+                                                : displayStock <= 10
+                                                    ? { text: 'Bajo Stock', bg: 'bg-amber-500' }
+                                                    : { text: 'Disponible', bg: 'bg-emerald-500' };
+                                            return (
+                                                <tr key={p.id} className={`hover:bg-blue-50/30 dark:hover:bg-blue-500/5 transition-colors group block md:table-row bg-white dark:bg-dark-card md:bg-transparent rounded-2xl mb-4 md:mb-0 shadow-sm md:shadow-none relative p-4 md:p-0 ${isVariant ? 'border-l-4 border-l-blue-400 md:border-b border-gray-50/50 dark:border-white/5 md:bg-gray-50/30 dark:md:bg-white/[0.02]' : 'border border-gray-100 dark:border-white/5 md:border-none'}`}>
+                                                    <td className={`px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5 ${isVariant ? 'md:pl-10' : ''}`}>
+                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Código</span>
+                                                        <span className="text-[10px] md:text-xs font-black font-mono text-gray-400 truncate max-w-[80px]">
+                                                            {p.code || '----'}
+                                                            {isVariant && <ChevronDown className="w-3 h-3 inline-block ml-1 -rotate-90 text-blue-400" />}
+                                                        </span>
+                                                    </td>
+
+                                                    <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
+                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Producto</span>
+                                                        <div className="flex items-center space-x-4">
+                                                            <button
+                                                                onClick={canEdit ? () => {
+                                                                    setUploadingFor(p.id);
+                                                                    fileInputRef.current.click();
+                                                                } : undefined}
+                                                                className={`w-10 h-10 rounded-xl bg-gray-50 dark:bg-white/5 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-white/10 transition-all relative group/icon ${canEdit ? 'group-hover:border-blue-200 hover:scale-110 cursor-pointer' : 'cursor-default'}`}
+                                                            >
+                                                                {p.imageUrl ? (
+                                                                    <img src={p.imageUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${p.imageUrl}` : p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <Box className={`w-5 h-5 text-gray-300 transition-colors ${canEdit ? 'group-hover:text-blue-400' : ''}`} />
+                                                                )}
+                                                                {canEdit && (
+                                                                <div className="absolute inset-0 bg-blue-500/80 flex items-center justify-center opacity-0 group-hover/icon:opacity-100 transition-opacity">
+                                                                    <div className="w-1 h-3 bg-white rounded-full animate-bounce" />
+                                                                </div>
+                                                                )}
+                                                            </button>
+                                                            <span className={`font-bold tracking-tight text-right md:text-left ${isVariant ? 'text-gray-600 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>
+                                                                {p.name}
+                                                            </span>
+                                                            {(!isVariant && hasVariants) && (
+                                                                <button onClick={() => toggleExpand(p.id)} className="p-1 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md transition-colors text-gray-400 ml-2" title="Ver Variaciones">
+                                                                    {isExpanded ? <ChevronUp className="w-4 h-4"/> : <div className="flex items-center"><Layers className="w-3 h-3 mr-1"/><span className="text-[10px] font-bold">{childrenMap[p.id].length}</span><ChevronDown className="w-4 h-4 ml-1"/></div>}
+                                                                </button>
                                                             )}
-                                                            <div className="absolute inset-0 bg-blue-500/80 flex items-center justify-center opacity-0 group-hover/icon:opacity-100 transition-opacity">
-                                                                <div className="w-1 h-3 bg-white rounded-full animate-bounce" />
-                                                            </div>
-                                                        </button>
-                                                        <span className="font-bold text-gray-900 dark:text-white tracking-tight text-right md:text-left">{p.name}</span>
-                                                    </div>
-                                                </td>
+                                                        </div>
+                                                    </td>
 
-                                                <td className="px-2 md:px-4 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                    <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Categoría</span>
-                                                    <span className="text-xs font-bold text-gray-500 max-w-[120px] truncate">
-                                                        {p.category}
-                                                    </span>
-                                                </td>
-
-                                                <td className="px-2 md:px-4 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                    <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Stock</span>
-                                                    <div className="flex items-center space-x-1.5">
-                                                        <span className="text-sm font-black text-gray-900 dark:text-white">
-                                                            {displayStock}
-                                                        </span>
-                                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 dark:bg-white/5 px-1.5 py-0.5 rounded-md">
-                                                            {p.unit || 'pz'}
-                                                        </span>
-                                                    </div>
-                                                </td>
-
-                                                <td className="px-2 md:px-4 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                    <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Precio</span>
-                                                    <span className="text-sm font-black text-blue-600 dark:text-blue-400 font-mono">
-                                                        ${p.price}
-                                                    </span>
-                                                </td>
-
-                                                {!activeStore && (
                                                     <td className="px-2 md:px-4 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tienda</span>
-                                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest bg-gray-100 dark:bg-white/5 px-2 py-1 rounded-md">
-                                                            {p.store?.name || 'Central'}
+                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Categoría</span>
+                                                        <span className="text-xs font-bold text-gray-500 max-w-[120px] truncate">
+                                                            {p.category}
                                                         </span>
                                                     </td>
-                                                )}
 
-                                                <>
+                                                    <td className="px-2 md:px-4 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
+                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Stock</span>
+                                                        <div className="flex items-center space-x-1.5">
+                                                            <span className="text-sm font-black text-gray-900 dark:text-white">
+                                                                {displayStock}
+                                                            </span>
+                                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 dark:bg-white/5 px-1.5 py-0.5 rounded-md">
+                                                                {p.unit || 'pz'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-2 md:px-4 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
+                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Precio</span>
+                                                        <span className="text-sm font-black text-blue-600 dark:text-blue-400 font-mono">
+                                                            ${p.price}
+                                                        </span>
+                                                    </td>
+
+                                                    {!activeStore && (
+                                                        <td className="px-2 md:px-4 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
+                                                            <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tienda</span>
+                                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest bg-gray-100 dark:bg-white/5 px-2 py-1 rounded-md">
+                                                                {p.store?.name || 'Central'}
+                                                            </span>
+                                                        </td>
+                                                    )}
+
+                                                    <>
+                                                        <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
+                                                            <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ingreso</span>
+                                                            <button onClick={() => setHistoryPopup({ type: 'ENTRY', product: p })} className="text-[10px] font-bold text-gray-400 hover:text-blue-500 transition-all">
+                                                                {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '--/--/--'}
+                                                            </button>
+                                                        </td>
+                                                        <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
+                                                            <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Salida</span>
+                                                            <button onClick={() => setHistoryPopup({ type: 'EXIT', product: p })} className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-all">
+                                                                {p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--/--/--'}
+                                                            </button>
+                                                        </td>
+                                                    </>
+
                                                     <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ingreso</span>
-                                                        <button onClick={() => setHistoryPopup({ type: 'ENTRY', product: p })} className="text-[10px] font-bold text-gray-400 hover:text-blue-500 transition-all">
-                                                            {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '--/--/--'}
-                                                        </button>
+                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Último Mov.</span>
+                                                        <div className="flex flex-col items-end md:items-start">
+                                                            <span className="text-[10px] font-black uppercase text-gray-500 tracking-tighter">
+                                                                {lastMovement?.type === 'Ingreso' ? 'INGRESÓ' : lastMovement?.type === 'Salida' ? 'SALIÓ' : '---'}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400 truncate max-w-[140px]">
+                                                                {lastMovement ? `${lastMovement.quantity} un.` : ''}
+                                                            </span>
+                                                        </div>
                                                     </td>
-                                                    <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Salida</span>
-                                                        <button onClick={() => setHistoryPopup({ type: 'EXIT', product: p })} className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-all">
-                                                            {p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--/--/--'}
-                                                        </button>
+                                                    <td className="px-2 md:px-2 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
+                                                        <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Estado</span>
+                                                        <div className={`w-3 h-3 rounded-full md:mx-auto shadow-sm ${status.bg} border-2 border-white dark:border-dark-card`} />
                                                     </td>
-                                                </>
 
-                                                {/* Acciones (History Summary in local, Delete in all) */}
-                                                <td className="px-2 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                    <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Último Mov.</span>
-                                                    <div className="flex flex-col items-end md:items-start">
-                                                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-tighter">
-                                                            {lastMovement?.type === 'Ingreso' ? 'INGRESÓ' : lastMovement?.type === 'Salida' ? 'SALIÓ' : '---'}
-                                                        </span>
-                                                        <span className="text-[10px] text-gray-400 truncate max-w-[140px]">
-                                                            {lastMovement ? `${lastMovement.quantity} un.` : ''}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-2 md:px-2 py-2 md:py-4 flex md:table-cell justify-between items-center border-b md:border-none border-gray-50 dark:border-white/5">
-                                                    <span className="md:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest">Estado</span>
-                                                    <div className={`w-3 h-3 rounded-full md:mx-auto shadow-sm ${status.bg} border-2 border-white dark:border-dark-card`} />
-                                                </td>
+                                                    <td className="px-2 md:px-4 py-4 md:py-4 flex md:table-cell items-center justify-end md:justify-center gap-1 md:gap-1 mt-2 md:mt-0">
+                                                        {canEdit && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setTransferModal({ product: p });
+                                                                        setSelectedTransferProductId(p.id.toString());
+                                                                    }}
+                                                                    className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-sm"
+                                                                    title="Transferir Stock"
+                                                                >
+                                                                    <ArrowUpRight className="w-5 h-5 md:w-4 md:h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setAdjustModal({ product: p })}
+                                                                    className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-sm"
+                                                                >
+                                                                    <Plus className="w-5 h-5 md:w-4 md:h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditModal({ product: p })}
+                                                                    className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-sm"
+                                                                    title="Editar Producto"
+                                                                >
+                                                                    <Edit2 className="w-5 h-5 md:w-4 md:h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setDeleteConfirm({ product: p, isGlobal: false })}
+                                                                    className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-gray-50 dark:bg-white/5 text-gray-400 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 transition-all"
+                                                                    title="Eliminar Producto"
+                                                                >
+                                                                    <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
+                                                                </button>
+                                                                {(!isVariant) && (
+                                                                <button
+                                                                    onClick={() => setCreateVariantModal({ parent: p })}
+                                                                    className="ml-1 w-10 md:w-8 h-10 md:h-8 rounded-full bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center hover:bg-cyan-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-sm"
+                                                                    title="Añadir Variante"
+                                                                >
+                                                                    <Layers className="w-5 h-5 md:w-4 md:h-4" />
+                                                                </button>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        };
 
-                                                <td className="px-2 md:px-4 py-4 md:py-4 flex md:table-cell items-center justify-end md:justify-center gap-1 md:gap-1 mt-2 md:mt-0">
-                                                    <button
-                                                        onClick={() => {
-                                                            setTransferModal({ product: p });
-                                                            setSelectedTransferProductId(p.id.toString());
-                                                        }}
-                                                        className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-sm"
-                                                        title="Transferir Stock"
-                                                    >
-                                                        <ArrowUpRight className="w-5 h-5 md:w-4 md:h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setAdjustModal({ product: p })}
-                                                        className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-sm"
-                                                    >
-                                                        <Plus className="w-5 h-5 md:w-4 md:h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setEditModal({ product: p })}
-                                                        className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-sm"
-                                                        title="Editar Producto"
-                                                    >
-                                                        <Edit2 className="w-5 h-5 md:w-4 md:h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setDeleteConfirm({ product: p, isGlobal: false })}
-                                                        className="w-10 md:w-8 h-10 md:h-8 rounded-full bg-gray-50 dark:bg-white/5 text-gray-400 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 transition-all"
-                                                        title="Eliminar Producto"
-                                                    >
-                                                        <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                        return (
+                                            <React.Fragment key={parentProd.id || idx}>
+                                                {renderRow(parentProd, false)}
+                                                {hasVariants && isExpanded && childrenMap[parentProd.id].map(variant => renderRow(variant, true))}
+                                            </React.Fragment>
                                         );
                                     })}
                                 </tbody>
@@ -696,7 +816,18 @@ const Inventory = () => {
                                                 <p className="font-bold text-gray-900 dark:text-white">{h.quantity} Unidades</p>
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(h.date).toLocaleString()}</p>
                                             </div>
-                                            <span className="text-[10px] font-black uppercase tracking-tighter text-gray-400">{h.details}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[10px] font-black uppercase tracking-tighter text-gray-400">{h.details}</span>
+                                                {(h.type === 'Ingreso' && canEdit) && (
+                                                    <button
+                                                        onClick={() => handleDeleteHistory(h.id)}
+                                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
+                                                        title="Eliminar registro y revertir stock (Corrección de error)"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     ))
                                 )}
@@ -734,6 +865,7 @@ const Inventory = () => {
                                     providerPrice: parseFloat(formData.get('providerPrice')),
                                     providerName: formData.get('providerName'),
                                     comparePrice: parseFloat(formData.get('comparePrice')),
+                                    expirationDate: formData.get('expirationDate') || null,
                                     stock: parseFloat(formData.get('stock')),
                                     storeId: rawStoreId ? parseInt(rawStoreId) : activeStore?.id
                                 };
@@ -848,6 +980,15 @@ const Inventory = () => {
                                         <input required step="0.01" type="number" name="stock" className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono font-bold" placeholder="0" />
                                     </div>
 
+                                    {/* Fecha Especial */}
+                                    <div className="space-y-4 md:col-span-2 mt-4">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-600 border-b border-purple-100 pb-2">Información Adicional</h4>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Fecha de Expiración (Opcional)</label>
+                                        <input type="date" name="expirationDate" className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-purple-500 transition-all font-bold text-gray-900 dark:text-white" />
+                                    </div>
+
                                     {/* Proveedores */}
                                     <div className="space-y-4 md:col-span-2 mt-4">
                                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 border-b border-amber-100 pb-2">Datos de Proveedor</h4>
@@ -871,6 +1012,104 @@ const Inventory = () => {
                                     <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-blue-500/20">
                                         Registrar Producto
                                     </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Create Variant Modal */}
+            {
+                createVariantModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm bg-black/50 overflow-hidden">
+                        <div className="bg-white dark:bg-dark-bg w-full max-w-xl rounded-[32px] border border-gray-100 dark:border-dark-border shadow-2xl animate-in slide-in-from-bottom duration-300">
+                            <div className="p-8 border-b border-gray-100 dark:border-white/10 flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Añadir Variante</h2>
+                                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Para: {createVariantModal.parent.name}</p>
+                                </div>
+                                <button onClick={() => setCreateVariantModal(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-2xl transition-all">
+                                    <X className="w-6 h-6 text-gray-400" />
+                                </button>
+                            </div>
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                const formData = new FormData(e.target);
+                                const parent = createVariantModal.parent;
+
+                                const variantData = {
+                                    name: `${parent.name} - ${formData.get('variantName')}`,
+                                    code: `${parent.code}-${formData.get('codeSuffix')}`,
+                                    category: parent.category,
+                                    unit: parent.unit,
+                                    price: parseFloat(formData.get('price')),
+                                    providerPrice: parent.providerPrice || 0,
+                                    providerName: parent.providerName || "",
+                                    comparePrice: parent.comparePrice || 0,
+                                    expirationDate: formData.get('expirationDate') || null,
+                                    stock: parseFloat(formData.get('stock')),
+                                    storeId: parent.storeId,
+                                    parentId: parent.id,
+                                    imageUrl: parent.imageUrl
+                                };
+                                try {
+                                    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/inventory`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(variantData)
+                                    });
+                                    if (res.ok) {
+                                        setCreateVariantModal(null);
+                                        fetchData();
+                                    } else {
+                                        const errorText = await res.text();
+                                        alert("Error Creando Variante: " + errorText);
+                                        console.error('Error backend:', errorText);
+                                    }
+                                } catch (error) {
+                                    console.error('Error creating variant:', error);
+                                    alert("Error de red al crear variante");
+                                }
+                            }} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4 md:col-span-2">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-600 border-b border-cyan-100 pb-2">Datos de la Variante</h4>
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Etiqueta de Variación (Ej: 1 Litro, Talla L, Azul)</label>
+                                        <input required name="variantName" className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-bold" placeholder="Ej: 1 Litro" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Código de Variante</label>
+                                        <div className="flex">
+                                            <span className="bg-gray-200 dark:bg-white/10 p-4 border border-gray-200 dark:border-white/10 rounded-l-2xl font-mono font-bold text-gray-500 flex items-center justify-center">
+                                                {createVariantModal.parent.code}-
+                                            </span>
+                                            <input required name="codeSuffix" maxLength={4} className="w-full bg-gray-50 dark:bg-black/20 border border-l-0 border-gray-200 dark:border-white/10 rounded-r-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono font-bold" placeholder="1" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Precio de Venta ($)</label>
+                                        <input required step="0.01" type="number" name="price" defaultValue={createVariantModal.parent.price} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono font-bold" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Stock Inicial de la Variante</label>
+                                        <input required step="0.01" type="number" name="stock" className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono font-bold" placeholder="0" />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Fecha de Expiración (Opcional)</label>
+                                        <input type="date" name="expirationDate" defaultValue={createVariantModal.parent.expirationDate ? new Date(createVariantModal.parent.expirationDate).toISOString().split('T')[0] : ''} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-bold text-gray-900 dark:text-white" />
+                                    </div>
+
+                                    <div className="md:col-span-2 pt-6 mt-2 border-t border-gray-100 dark:border-white/10">
+                                        <div className="flex items-center gap-3">
+                                            <button type="submit" className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-2xl p-4 font-black uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2">
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                <span>Guardar Variante</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -905,6 +1144,7 @@ const Inventory = () => {
                                     providerPrice: parseFloat(formData.get('providerPrice')) || 0,
                                     providerName: formData.get('providerName'),
                                     comparePrice: parseFloat(formData.get('comparePrice')) || 0,
+                                    expirationDate: formData.get('expirationDate') || null,
                                 };
                                 try {
                                     const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/inventory/${editModal.product.id}`, {
@@ -936,8 +1176,8 @@ const Inventory = () => {
                                         <input required name="name" defaultValue={editModal.product.name} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold" placeholder="Ej: Camisa Pro" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Código (Máx 4 car.)</label>
-                                        <input required name="code" maxLength={4} defaultValue={editModal.product.code} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono font-bold" placeholder="A12B" />
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Código</label>
+                                        <input required name="code" maxLength={10} defaultValue={editModal.product.code} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono font-bold" placeholder="A12B" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-black uppercase tracking-widest text-gray-400">Categoría</label>
@@ -1001,6 +1241,15 @@ const Inventory = () => {
                                     <div className="space-y-2">
                                         <label className="text-xs font-black uppercase tracking-widest text-gray-400">Precio de Venta ($)</label>
                                         <input required step="0.01" type="number" name="price" defaultValue={editModal.product.price} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono font-bold" placeholder="0.00" />
+                                    </div>
+
+                                    {/* Fecha Especial */}
+                                    <div className="space-y-4 md:col-span-2 mt-4">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-600 border-b border-purple-100 pb-2">Información Adicional</h4>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-gray-400">Fecha de Expiración (Opcional)</label>
+                                        <input type="date" name="expirationDate" defaultValue={editModal.product.expirationDate ? new Date(editModal.product.expirationDate).toISOString().split('T')[0] : ''} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-purple-500 transition-all font-bold text-gray-900 dark:text-white" />
                                     </div>
 
                                     {/* Proveedores */}

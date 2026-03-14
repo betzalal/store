@@ -66,7 +66,7 @@ function App() {
                                         <Route path="/stores" element={<ProtectedRoute allowedRoles={['admin', 'contador']}><Stores /></ProtectedRoute>} />
                                         <Route path="/inventory" element={<ProtectedRoute allowedRoles={['admin', 'contador']}><Inventory /></ProtectedRoute>} />
                                         <Route path="/products" element={<ProtectedRoute allowedRoles={['admin']}><Products /></ProtectedRoute>} />
-                                        <Route path="/sales" element={<ProtectedRoute allowedRoles={['admin', 'contador', 'vendedor']}><Sales /></ProtectedRoute>} />
+                                        <Route path="/sales" element={<ProtectedRoute allowedRoles={['admin', 'vendedor']}><Sales /></ProtectedRoute>} />
                                         <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><Users /></ProtectedRoute>} />
                                         <Route path="/memory" element={<ProtectedRoute allowedRoles={['admin', 'contador']}><Memory /></ProtectedRoute>} />
                                         <Route path="/promo" element={<ProtectedRoute allowedRoles={['admin']}><PromoCodes /></ProtectedRoute>} />

@@ -112,8 +112,8 @@ const MainLayout = ({ children }) => {
             label: 'Operaciones',
             items: [
                 { name: 'Inventarios', path: '/inventory', icon: Box, roles: ['admin', 'contador'] },
-                { name: 'Productos', path: '/products', icon: Package, roles: ['admin', 'contador'] },
-                { name: 'Ventas', path: '/sales', icon: TrendingUp, roles: ['admin', 'contador', 'vendedor'] },
+                { name: 'Productos', path: '/products', icon: Package, roles: ['admin'] },
+                { name: 'Ventas', path: '/sales', icon: TrendingUp, roles: ['admin', 'vendedor'] },
             ]
         },
         {
@@ -255,6 +255,7 @@ const MainLayout = ({ children }) => {
                         isDark={isDark}
                         config={config}
                         onBackgroundChange={updateBackground}
+                        onConfigUpdate={(newConfig) => setConfig(prev => ({ ...prev, ...newConfig }))}
                     />
                 )}
 

@@ -262,7 +262,7 @@ const StaffModal = ({ isOpen, onClose, store, onSave }) => {
                     {staff.map((member, idx) => (
                         <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gray-200 bg-cover bg-center border border-gray-300" style={{ backgroundImage: `url('${member.photo || 'https://ui-avatars.com/api/?name=' + member.name}')` }} />
+                                <div className="w-8 h-8 rounded-full bg-gray-200 bg-cover bg-center border border-gray-300" style={{ backgroundImage: `url('${member.photo ? (member.photo.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${member.photo}` : member.photo) : 'https://ui-avatars.com/api/?name=' + member.name}')` }} />
                                 <div>
                                     <p className="font-bold text-gray-900 dark:text-white text-sm">{member.name}</p>
                                     <p className="text-xs text-blue-500 font-bold uppercase">{member.role}</p>
@@ -332,7 +332,7 @@ const PhotosModal = ({ isOpen, onClose, store, onSave }) => {
                 <div className="grid grid-cols-3 gap-4 max-h-80 overflow-y-auto mb-6 p-1">
                     {photos.map((url, idx) => (
                         <div key={idx} className="relative group aspect-video rounded-xl overflow-hidden bg-gray-100 shadow-md">
-                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <img src={url.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${url}` : url} alt="" className="w-full h-full object-cover" />
                             <button
                                 onClick={() => handleRemove(idx)}
                                 className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
@@ -458,7 +458,7 @@ const Stores = () => {
             <div className="h-full flex flex-col bg-white dark:bg-[#0f172a] overflow-hidden animate-in fade-in slide-in-from-right duration-300">
                 {/* Detail Hero - Improved Location Visibility */}
                 <div className="relative h-64 md:h-80 w-full shrink-0 group">
-                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${coverImage}')` }}>
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${coverImage.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${coverImage}` : coverImage}')` }}>
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/40 to-transparent" />
                     </div>
 
@@ -541,7 +541,7 @@ const Stores = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                         {photos.map((url, i) => (
                                             <div key={i} className="aspect-video rounded-2xl bg-gray-100 dark:bg-white/5 overflow-hidden hover:scale-105 transition-all cursor-pointer shadow-lg group relative">
-                                                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${url}')` }} />
+                                                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${url.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${url}` : url}')` }} />
                                             </div>
                                         ))}
                                     </div>
@@ -566,7 +566,7 @@ const Stores = () => {
                                 <div className="space-y-4">
                                     {staff.map((member, i) => (
                                         <div key={i} className="flex items-center p-3 rounded-2xl bg-gray-50 dark:bg-white/5 transition-colors group">
-                                            <div className="w-12 h-12 rounded-xl bg-gray-200 bg-cover bg-center mr-4 shadow-inner" style={{ backgroundImage: `url('${member.photo || 'https://ui-avatars.com/api/?name=' + member.name}')` }} />
+                                            <div className="w-12 h-12 rounded-xl bg-gray-200 bg-cover bg-center mr-4 shadow-inner" style={{ backgroundImage: `url('${member.photo ? (member.photo.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${member.photo}` : member.photo) : 'https://ui-avatars.com/api/?name=' + member.name}')` }} />
                                             <div>
                                                 <p className="font-bold text-gray-900 dark:text-white text-sm">{member.name}</p>
                                                 <span className="text-[10px] uppercase font-black tracking-wider text-blue-500">{member.role}</span>
@@ -630,7 +630,7 @@ const Stores = () => {
                                 className="group relative h-[320px] rounded-[32px] overflow-hidden cursor-pointer shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-blue-500/20"
                             >
                                 {/* Background Image */}
-                                <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url('${cover}')` }} />
+                                <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url('${cover.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${cover}` : cover}')` }} />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
 
                                 {/* Content */}
@@ -649,7 +649,7 @@ const Stores = () => {
                                     <div className="flex items-center justify-between border-t border-white/10 pt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-150">
                                         <div className="flex -space-x-2">
                                             {getStaff(store).slice(0, 3).map((s, i) => (
-                                                <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-gray-300 bg-cover bg-center" style={{ backgroundImage: `url('${s.photo || 'https://ui-avatars.com/api/?name=' + s.name}')` }} />
+                                                <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-gray-300 bg-cover bg-center" style={{ backgroundImage: `url('${s.photo ? (s.photo.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${s.photo}` : s.photo) : 'https://ui-avatars.com/api/?name=' + s.name}')` }} />
                                             ))}
                                             {getStaff(store).length === 0 && <div className="w-8 h-8 rounded-full border-2 border-black bg-gray-500 flex items-center justify-center text-[8px] text-white">?</div>}
                                         </div>

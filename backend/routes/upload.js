@@ -26,7 +26,7 @@ router.post('/', (req, res) => {
 
         // Return URL relative to server root
         // Assuming server serves 'public/uploads' at '/uploads'
-        res.json({ url: `http://localhost:3001/uploads/${filename}` });
+        res.json({ url: `/uploads/${filename}` });
     });
 });
 

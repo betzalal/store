@@ -1,0 +1,11 @@
+Versión 1.3 - Control de Inventario y Mejoras Globales
+
+Cambios realizados en esta versión:
+
+1.- Selector de Empresa Global: Se agregó en opciones la forma de poder cambiar la empresa activa en toda la interfaz sin recargar.
+2.- Subida de Imágenes en Producción: Se suben ahora imágenes en el VPS localmente mapeando los volúmenes en Docker, corrigiendo la previsualización global.
+3.- Corrección de Historial (Inventory): Opción de reducir objetos agregados por error en el inventario permitiendo borrar "Ingresos" directamente sin sumar como "Salidas".
+4.- Calendario de Expiración: Se agregaron fechas de expiración a los productos y una pestaña de calendario con alertas visuales (Rojo, Naranja, Verde) para productos próximos a vencer o vencidos.
+5.- Separación de Productos (Bundles): Se arregló el modo de separación de productos (Combos/Paquetes), así se devuelve dinámicamente el item individual al inventario principal al desarmarlo.
+6.- Privilegios de Rol (Contador): Se arreglaron los privilegios del rol Contador, eliminando pestañas de edición y restringiendo operaciones sensibles (botones de agregar, vender o editar el inventario original).
+7.- Variaciones de Productos: Se aumentó la opción de poder dar a un item en el inventario diferentes versiones o formas (Variaciones "Hijas"), agilizando los registros para que ya no se tenga que subir la misma imagen ni configuraciones repetidas al añadir litrajes, tallas u otros formatos.

@@ -849,7 +849,7 @@ const Sales = () => {
                                     >
                                         <div className="aspect-[4/3] rounded-[0.8rem] bg-gray-100 dark:bg-black/20 mb-2 overflow-hidden relative">
                                             {product.imageUrl ? (
-                                                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                <img src={product.imageUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${product.imageUrl}` : product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-300">
                                                     <Package className="w-5 h-5 opacity-50" />
@@ -925,7 +925,7 @@ const Sales = () => {
                                         className="bg-white dark:bg-dark-card rounded-xl p-2.5 shadow-sm border border-gray-100 dark:border-white/5 flex gap-3 group hover:shadow-md transition-all"
                                     >
                                         <div className="w-12 h-12 rounded-lg bg-gray-50 dark:bg-black/20 shrink-0 overflow-hidden">
-                                            {item.imageUrl && <img src={item.imageUrl} className="w-full h-full object-cover" />}
+                                            {item.imageUrl && <img src={item.imageUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${item.imageUrl}` : item.imageUrl} className="w-full h-full object-cover" />}
                                         </div>
                                         <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                                             <div className="flex justify-between items-start gap-2">

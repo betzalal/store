@@ -1,0 +1,27 @@
+cambios tienda
+
+1.- que en opciones se pueda cambiar nombre y logo de la empresa 
+
+3.- error con imagen al ponerlo en la app, y no se puede escogerlo para cambiar
+4.- no hay como reducir el inventario si uno comete error
+5.- que al escoger la imagen en inventario se pueda escoger entre abrir la camara de celular o archivos
+
+6.- 
+se tiene que crear un manual para su uso
+tiene que estar para la primera vez que entren y en opciones para volver a ver
+
+7.- copiar el archivo .json - dirigir a la ip todas las apps
+
+8- no se puede cambiar als imagenes, se suben y no se ejecutan al elegirlas
+
+9.- que se mande el json mensual de datos con lo siguiente
+fecha venta
+cantidad
+precio
+nombre del producto 
+region  
+
+1.- se agrego en opciones la forma de poder cambiar empresa
+2.- Se  suben ahora imagenes en el vps
+3.- opcion de reducir objetos agregados en el inventario
+4.- Fechas de expiración y una pestaña de calendario con dichas fechas

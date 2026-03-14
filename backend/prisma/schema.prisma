@@ -51,6 +51,7 @@ model Product {
   store         Store    @relation(fields: [storeId], references: [id])
   sales         SaleItem[]
   history       ProductHistory[]
+  expirationDate DateTime? // New: Expiration Date
   
   @@unique([code, storeId]) // Unique code per store
   
@@ -58,6 +59,11 @@ model Product {
   isBundle      Boolean           @default(false)
   components    BundleComponent[] @relation("BundleParent")
   partOfBundles BundleComponent[] @relation("BundleChild")
+
+  // Variant Support (Parent -> Children)
+  parentId      Int?
+  parent        Product?          @relation("ProductVariants", fields: [parentId], references: [id])
+  variants      Product[]         @relation("ProductVariants")
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

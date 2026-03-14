@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { name, price, stock, storeId, code, category, providerPrice, providerName, comparePrice, unit, imageUrl } = req.body;
+        const { name, price, stock, storeId, code, category, providerPrice, providerName, comparePrice, unit, imageUrl, expirationDate, parentId } = req.body;
         const product = await prisma.product.create({
             data: {
                 name,
@@ -39,8 +39,10 @@ router.post('/', async (req, res) => {
                 providerName: providerName || "",
                 comparePrice: comparePrice ? parseFloat(comparePrice) : 0,
                 imageUrl: imageUrl || null,
+                expirationDate: expirationDate ? new Date(expirationDate) : null,
                 stock: parseFloat(stock),
                 storeId: parseInt(storeId),
+                parentId: parentId ? parseInt(parentId) : null,
                 history: {
                     create: {
                         type: "Ingreso",
@@ -93,7 +95,7 @@ router.post('/:id/upload', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, code, category, unit, price, providerPrice, providerName, comparePrice } = req.body;
+        const { name, code, category, unit, price, providerPrice, providerName, comparePrice, expirationDate } = req.body;
 
         const updatedProduct = await prisma.product.update({
             where: { id: parseInt(id) },
@@ -106,6 +108,7 @@ router.put('/:id', async (req, res) => {
                 providerPrice: providerPrice ? parseFloat(providerPrice) : 0,
                 providerName: providerName || "",
                 comparePrice: comparePrice ? parseFloat(comparePrice) : 0,
+                expirationDate: expirationDate ? new Date(expirationDate) : null,
             }
         });
 
@@ -187,6 +190,98 @@ router.post('/:id/adjust', async (req, res) => {
         res.json(updatedProduct);
     } catch (error) {
         console.error('Error adjusting stock:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Hard Delete History Entry (Undo/Resert stock error)
+router.delete('/history/:historyId', async (req, res) => {
+    try {
+        const { historyId } = req.params;
+
+        await prisma.$transaction(async (tx) => {
+            const history = await tx.productHistory.findUnique({
+                where: { id: parseInt(historyId) },
+                include: {
+                    product: {
+                        include: { components: true }
+                    }
+                }
+            });
+
+            if (!history) throw new Error('History entry not found');
+
+            // If it was an "Ingreso", deleting it means we REMOVE stock.
+            // If it was a "Salida", deleting it means we ADD stock back.
+            // (Assuming errors can be either direction, but mostly Ingresos).
+            const adjustAmount = history.type === 'Ingreso' ? -history.quantity : history.quantity;
+
+            await tx.product.update({
+                where: { id: history.productId },
+                data: {
+                    stock: { increment: adjustAmount }
+                }
+            });
+
+            // Handle Bundle/Compound Products: Revert ingredients
+            const product = history.product;
+            if (product.isBundle && product.components && product.components.length > 0) {
+                for (const comp of product.components) {
+                    const compQuantityUsed = comp.quantity * history.quantity;
+
+                    // Revert the component stock
+                    const compNewStock = history.type === 'Ingreso'
+                        ? { increment: compQuantityUsed }
+                        : { decrement: compQuantityUsed };
+
+                    await tx.product.update({
+                        where: { id: comp.componentId },
+                        data: {
+                            stock: compNewStock
+                        }
+                    });
+
+                    // Attempt to locate and clean up the auto-generated history entry for the component
+                    const expectedDetailString = `Por ajuste de producto compuesto base: ${product.name} (${history.type})`;
+                    const relatedHistory = await tx.productHistory.findFirst({
+                        where: {
+                            productId: comp.componentId,
+                            details: expectedDetailString,
+                            quantity: compQuantityUsed,
+                            date: {
+                                gte: new Date(new Date(history.date).getTime() - 10000), // Within 10 seconds of original action
+                                lte: new Date(new Date(history.date).getTime() + 10000)
+                            }
+                        }
+                    });
+
+                    if (relatedHistory) {
+                        await tx.productHistory.delete({
+                            where: { id: relatedHistory.id }
+                        });
+                    } else {
+                        // If we didn't find the exact history, at least we adjusted stock.
+                        // Log a correction history so it balances.
+                        await tx.productHistory.create({
+                            data: {
+                                type: history.type === 'Ingreso' ? 'Ingreso' : 'Salida', // Reverting bundle "Ingreso" means returning components -> "Ingreso"
+                                quantity: compQuantityUsed,
+                                details: `Reversión por corrección de producto compuesto: ${product.name}`,
+                                productId: comp.componentId
+                            }
+                        });
+                    }
+                }
+            }
+
+            await tx.productHistory.delete({
+                where: { id: parseInt(historyId) }
+            });
+        });
+
+        res.json({ success: true, message: 'Entrada eliminada y stock corregido' });
+    } catch (error) {
+        console.error('Error deleting history entry:', error);
         res.status(500).json({ error: error.message });
     }
 });

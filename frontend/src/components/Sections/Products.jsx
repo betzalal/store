@@ -476,7 +476,7 @@ const Products = () => {
                                                 <div className="flex items-center space-x-3">
                                                     <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-white/10">
                                                         {item.imageUrl ? (
-                                                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                                            <img src={item.imageUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${item.imageUrl}` : item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <Box className="w-4 h-4 text-gray-300" />
                                                         )}
@@ -541,7 +541,7 @@ const Products = () => {
                                         >
                                             <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0 flex items-center justify-center mr-3">
                                                 {item.imageUrl ? (
-                                                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                                                    <img src={item.imageUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${item.imageUrl}` : item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-lg" />
                                                 ) : (
                                                     <Box className="w-4 h-4 text-gray-400" />
                                                 )}

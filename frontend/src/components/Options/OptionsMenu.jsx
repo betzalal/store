@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, User, Monitor, Image, Trash2, Save, X, Check, Sun, Moon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, User, Monitor, Image, Trash2, Save, X, Check, Sun, Moon, Building2, Upload } from 'lucide-react';
 
-const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChange }) => {
+const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChange, onConfigUpdate }) => {
     const [ip, setIp] = useState('Loading...');
     const [user, setUser] = useState({ username: 'Guest', role: 'Visitor' });
     const [backgrounds, setBackgrounds] = useState([]);
-    const [activeTab, setActiveTab] = useState('general'); // general, appearance
+    const [activeTab, setActiveTab] = useState('general'); // general, appearance, empresa
     const [fastSale, setFastSale] = useState(false);
+
+    // Company Tab States
+    const [companyName, setCompanyName] = useState(config?.companyName || 'MagicStore');
+    const [companySlogan, setCompanySlogan] = useState(config?.slogan || '');
+    const [companyNit, setCompanyNit] = useState(config?.nit || '');
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState(config?.logoUrl ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${config.logoUrl}` : null);
+    const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         // Fetch System Info
@@ -15,8 +24,13 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
             .then(data => setIp(data.ip));
 
         // Fetch Current User
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users/current`)
-            .then(res => res.json())
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users/current`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+            .then(res => {
+                if (res.ok) return res.json()
+                throw new Error('Not logged in')
+            })
             .then(data => setUser(data))
             .catch(() => setUser({ username: 'Admin Loop', role: 'admin' }));
 
@@ -40,10 +54,73 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
         }
     }, []);
 
-    const saveConfig = () => {
-        // In a real app, you might save specific user prefs here
-        alert('Configuración guardada.');
-        onClose();
+    const handleLogoSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setLogoFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogoPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const saveConfig = async () => {
+        if (activeTab === 'empresa') {
+            setIsSaving(true);
+            try {
+                let logoUrl = config?.logoUrl;
+
+                // 1. Upload Logo if selected
+                if (logoFile) {
+                    const formData = new FormData();
+                    formData.append('logo', logoFile);
+
+                    const uploadRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/setup/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (uploadRes.ok) {
+                        const uploadData = await uploadRes.json();
+                        logoUrl = uploadData.url;
+                    }
+                }
+
+                // 2. Update Config
+                const configRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/setup/config`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        companyName,
+                        slogan: companySlogan,
+                        nit: companyNit,
+                        ...(logoUrl && { logoUrl })
+                    })
+                });
+
+                if (configRes.ok) {
+                    const result = await configRes.json();
+                    if (onConfigUpdate) {
+                        onConfigUpdate(result.config);
+                    }
+                    alert('Datos de la empresa actualizados correctamente.');
+                } else {
+                    alert('Error al guardar datos de la empresa');
+                }
+
+            } catch (error) {
+                console.error("Error saving company config:", error);
+                alert("Error de conexión al guardar.");
+            } finally {
+                setIsSaving(false);
+            }
+        } else {
+            // Routine settings save for other tabs
+            alert('Configuración guardada.');
+            onClose();
+        }
     };
 
     return (
@@ -83,6 +160,13 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
                         >
                             <Image className="w-4 h-4 shrink-0" />
                             <span>Apariencia</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('empresa')}
+                            className={`flex-none md:w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center space-x-3 transition-colors ${activeTab === 'empresa' ? 'bg-white dark:bg-gray-800 text-orange-500 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                        >
+                            <Building2 className="w-4 h-4 shrink-0" />
+                            <span>Empresa</span>
                         </button>
                     </div>
 
@@ -188,15 +272,100 @@ const OptionsMenu = ({ onClose, onThemeToggle, isDark, config, onBackgroundChang
                             </div>
                         )}
 
+                        {activeTab === 'empresa' && (
+                            <div className="space-y-6 animate-fade-in">
+
+                                {/* Logo Section */}
+                                <div className="flex flex-col items-center sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                                    <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                        <div className="w-24 h-24 rounded-2xl bg-white dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-sm group-hover:border-orange-500 transition-colors">
+                                            {logoPreview ? (
+                                                <img src={logoPreview} alt="Logo" className="w-full h-full object-contain p-2" />
+                                            ) : (
+                                                <Building2 className="w-8 h-8 text-gray-400 group-hover:text-orange-500 transition-colors" />
+                                            )}
+                                        </div>
+                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg border-2 border-white dark:border-gray-900 group-hover:scale-110 transition-transform">
+                                            <Upload className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleLogoSelect}
+                                    />
+                                    <div className="text-center sm:text-left">
+                                        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Logotipo de la Empresa</h3>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs">
+                                            Sube tu logotipo. Recomendamos una imagen PNG o JPG cuadrada (min. 150x150px) para que se vea excelente en el menú.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Details Section */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
+                                            Nombre de la Empresa / Sistema
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={companyName}
+                                            onChange={(e) => setCompanyName(e.target.value)}
+                                            className="w-full bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all font-medium"
+                                            placeholder="Ej. Mi Super Tienda"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
+                                                Eslogan (Opcional)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={companySlogan}
+                                                onChange={(e) => setCompanySlogan(e.target.value)}
+                                                className="w-full bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all font-medium"
+                                                placeholder="Ej. Siempre a tu lado"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
+                                                NIT / Identificación
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={companyNit}
+                                                onChange={(e) => setCompanyNit(e.target.value)}
+                                                className="w-full bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all font-medium"
+                                                placeholder="12345678"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
 
                 {/* Footer */}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end space-x-3">
                     <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Cancelar</button>
-                    <button onClick={saveConfig} className="px-6 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-orange-500/20 flex items-center">
-                        <Save className="w-4 h-4 mr-2" />
-                        Guardar
+                    <button
+                        onClick={saveConfig}
+                        disabled={isSaving}
+                        className={`px-6 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold rounded-lg shadow-lg flex items-center transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'shadow-orange-500/20'}`}
+                    >
+                        {isSaving ? (
+                            <div className="w-4 h-4 mr-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <Save className="w-4 h-4 mr-2" />
+                        )}
+                        {isSaving ? 'Guardando...' : 'Guardar'}
                     </button>
                 </div>
             </div>
