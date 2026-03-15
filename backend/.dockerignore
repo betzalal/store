@@ -1,0 +1,12 @@
+node_modules/
+.dockerignore
+Dockerfile
+.git
+.gitignore
+npm-debug.log
+.env
+.env.*
+prisma/dev.db*
+tmp/
+.gemini/
+cambios_v*.txt
