@@ -1,0 +1,198 @@
+version: '3.8'
+
+services:
+  # --- TIENDA PRINCIPAL (STORE) ---
+  store-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: betzalal
+      POSTGRES_PASSWORD: Justcause1967
+      POSTGRES_DB: db_store
+    ports:
+      - "5434:5432"
+    volumes:
+      - store_data:/var/lib/postgresql/data
+
+  store-backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "3100:3001"
+    environment:
+      - DATABASE_URL=postgresql://betzalal:Justcause1967@store-db:5432/db_store
+    depends_on:
+      - store-db
+
+  store-frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://144.91.118.73:3100
+    ports:
+      - "5175:5173"
+    depends_on:
+      - store-backend
+
+  # --- PERSONA 1 ---
+  p1-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: betza1
+      POSTGRES_PASSWORD: Justcause1967
+      POSTGRES_DB: db1
+    ports:
+      - "5435:5432"
+    volumes:
+      - p1_data:/var/lib/postgresql/data
+ p1-backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "4001:3001"
+    environment:
+      - DATABASE_URL=postgresql://betza1:Justcause1967@p1-db:5432/db1
+    depends_on:
+      - p1-db
+
+  p1-frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://144.91.118.73:4001
+    ports:
+      - "6001:5173"
+
+  # --- PERSONA 2 ---
+  p2-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: betza2
+      POSTGRES_PASSWORD: Justcause1967
+      POSTGRES_DB: db2
+    ports:
+      - "5436:5432"
+    volumes:
+      - p2_data:/var/lib/postgresql/data
+
+  p2-backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "4002:3001"
+    environment:
+      - DATABASE_URL=postgresql://betza2:Justcause1967@p2-db:5432/db2
+    depends_on:
+      - p2-db
+
+  p2-frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://144.91.118.73:4002
+    ports:
+      - "6002:5173"
+
+ # --- PERSONA 3 ---
+  p3-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: betza3
+      POSTGRES_PASSWORD: Justcause1967
+      POSTGRES_DB: db3
+    ports:
+      - "5437:5432"
+    volumes:
+      - p3_data:/var/lib/postgresql/data
+
+  p3-backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "4003:3001"
+    environment:
+      - DATABASE_URL=postgresql://betza3:Justcause1967@p3-db:5432/db3
+    depends_on:
+      - p3-db
+
+  p3-frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://144.91.118.73:4003
+    ports:
+      - "6003:5173"
+
+   # --- PERSONA 4 ---
+  p4-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: betza4
+      POSTGRES_PASSWORD: Justcause1967
+      POSTGRES_DB: db4
+    ports:
+      - "5438:5432"
+    volumes:
+      - p4_data:/var/lib/postgresql/data
+
+  p4-backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "4004:3001"
+    environment:
+- DATABASE_URL=postgresql://betza4:Justcause1967@p4-db:5432/db4
+    depends_on:
+      - p4-db
+
+  p4-frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://144.91.118.73:4004
+    ports:
+      - "6004:5173"
+
+ # --- PERSONA 5 ---
+  p5-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: betza5
+      POSTGRES_PASSWORD: Justcause1967
+      POSTGRES_DB: db5
+    ports:
+      - "5439:5432"
+    volumes:
+      - p5_data:/var/lib/postgresql/data
+
+  p5-backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "4005:3001"
+    environment:
+      - DATABASE_URL=postgresql://betza5:Justcause1967@p5-db:5432/db5
+    depends_on:
+      - p5-db
+
+  p5-frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://144.91.118.73:4005
+    ports:
+      - "6005:5173"
+
+
+volumes:
+  store_data:
+  p1_data:
+  p2_data:
+  p3_data:
+  p4_data:
+  p5_data:

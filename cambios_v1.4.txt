@@ -1,0 +1,8 @@
+Parche 4 - Migración Definitiva a Docker & PostgreSQL
+
+Cambios estructurales realizados:
+1. Cambio de Provider: Prisma ahora utiliza `postgresql` nativo en lugar del débil SQLite local (`dev.db`). Esto soluciona finalmente los errores HTTP 500 al inicializar la base de datos o leer la configuración.
+2. Integración de Dockerfile: El `backend/Dockerfile` reconstruye los binarios especiales para Linux Alpine de Prisma al crearse (`npx prisma generate`) para que las consultas no fallen.
+3. Tablas Automáticas: Añadimos validaciones en el arranque; al hacer `up -d`, cada contenedor de producción fuerza un `npx prisma db push` construyendo las tablas en postgres sin intervención del administrador.
+4. Entornos pre-hechos: Replicación total del archivo `docker-compose.yml` final de la empresa con tiendas Store y P1 a P5 activas, listas para descargar en el VPS.
+5. Local PostgreSQL: Configuración del `.env` local (`localhost:5434/db_store`) en PC de desarrollo, permitiendo correr `npm run dev` conectando al PostgreSQL en Docker de Windows sin depender nunca más de SQLite.
